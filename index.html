@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesa de Ayuda Técnica - UNIOC</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
+        h1, h2 { color: #2c3e50; }
+        .container { max-width: 950px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #007bff; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button:hover { background-color: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .badge { padding: 4px 8px; border-radius: 4px; color: white; font-size: 12px; font-weight: bold; }
+        .alta { background-color: #dc3545; }
+        .media { background-color: #ffc107; color: #333; }
+        .baja { background-color: #28a745; }
+        .filter-group { display: flex; gap: 10px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ Mesa de Ayuda Técnica</h1>
+        <p><strong>Equipo de Soporte:</strong> Miguel Ángel España | Lorenzo González | Santiago Ocampo</p>
+
+        <!-- Formulario para Crear Ticket -->
+        <h2>Crear Nuevo Ticket</h2>
+        <form id="ticketForm">
+            <div class="form-group">
+                <label for="titulo">Título del problema *</label>
+                <input type="text" id="titulo" required placeholder="Ej. Fallo en la red del piso 2">
+            </div>
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <textarea id="descripcion" rows="2" placeholder="Detalles de la falla..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="prioridad">Prioridad *</label>
+                <select id="prioridad" required>
+                    <option value="baja">Baja</option>
+                    <option value="media" selected>Media</option>
+                    <option value="alta">Alta</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="tecnicoAsignado">Técnico Asignado</label>
+                <select id="tecnicoAsignado">
+                    <option value="Miguel Ángel España">Miguel Ángel España (Admin / Redes)</option>
+                    <option value="Lorenzo González">Lorenzo González (Soporte Nivel 1)</option>
+                    <option value="Santiago Ocampo">Santiago Ocampo (Soporte Nivel 2)</option>
+                </select>
+            </div>
+            <button type="submit">Guardar Ticket</button>
+        </form>
+
+        <hr style="margin: 30px 0;">
+
+        <!-- Lista y Filtros -->
+        <h2>Lista de Tickets Registrados</h2>
+        <div class="filter-group">
+            <select id="filtroEstado" onchange="cargarTickets()">
+                <option value="">-- Todos los Estados --</option>
+                <option value="abierto">Abierto</option>
+                <option value="en proceso">En Proceso</option>
+                <option value="resuelto">Resuelto</option>
+            </select>
+            <select id="filtroPrioridad" onchange="cargarTickets()">
+                <option value="">-- Todas las Prioridades --</option>
+                <option value="alta">Alta</option>
+                <option value="media">Media</option>
+                <option value="baja">Baja</option>
+            </select>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Título / Descripción</th>
+                    <th>Prioridad</th>
+                    <th>Estado</th>
+                    <th>Técnico</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaTickets">
+                <!-- Se llena automáticamente con JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const API_URL = '/tickets';
+
+        async function cargarTickets() {
+            const estado = document.getElementById('filtroEstado').value;
+            const prioridad = document.getElementById('filtroPrioridad').value;
+            
+            let url = API_URL + '?';
+            if (estado) url += `estado=${estado}&`;
+            if (prioridad) url += `prioridad=${prioridad}&`;
+
+            const res = await fetch(url);
+            const tickets = await res.json();
+            
+            const tbody = document.getElementById('tablaTickets');
+            tbody.innerHTML = '';
+
+            tickets.forEach(t => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${t.id}</td>
+                        <td><strong>${t.titulo}</strong><br><small>${t.descripcion || ''}</small></td>
+                        <td><span class="badge ${t.prioridad}">${t.prioridad.toUpperCase()}</span></td>
+                        <td>
+                            <select onchange="cambiarEstado(${t.id}, this.value)">
+                                <option value="abierto" ${t.estado === 'abierto' ? 'selected' : ''}>Abierto</option>
+                                <option value="en proceso" ${t.estado === 'en proceso' ? 'selected' : ''}>En Proceso</option>
+                                <option value="resuelto" ${t.estado === 'resuelto' ? 'selected' : ''}>Resuelto</option>
+                            </select>
+                        </td>
+                        <td>${t.tecnicoAsignado}</td>
+                        <td>
+                            <button onclick="eliminarTicket(${t.id})" style="background-color: #dc3545; padding: 6px 10px; margin: 0; font-size: 12px;">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        document.getElementById('ticketForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nuevo = {
+                titulo: document.getElementById('titulo').value,
+                descripcion: document.getElementById('descripcion').value,
+                prioridad: document.getElementById('prioridad').value,
+                tecnicoAsignado: document.getElementById('tecnicoAsignado').value
+            };
+
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(nuevo)
+            });
+
+            document.getElementById('ticketForm').reset();
+            cargarTickets();
+        });
+
+        async function cambiarEstado(id, nuevoEstado) {
+            await fetch(`${API_URL}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: nuevoEstado })
+            });
+            cargarTickets();
+        }
+
+        async function eliminarTicket(id) {
+            if (confirm('¿Deseas eliminar este ticket?')) {
+                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                cargarTickets();
+            }
+        }
+
+        cargarTickets();
+    </script>
+</body>
+</html>
